@@ -1,0 +1,39 @@
+package com.notifymind.filter
+
+import androidx.room.*
+
+@Entity
+data class NotificationItem(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val packageName: String,
+    val title: String,
+    val text: String,
+    val postTime: Long,
+    val vote: Int = -1, // -1 unvoted, 0 dismiss, 1 keep
+    val filtered: Boolean = false
+)
+
+@Dao
+interface NotificationDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(item: NotificationItem): Long
+    @Query("SELECT * FROM NotificationItem WHERE vote != -1")
+    suspend fun getVotes(): List<NotificationItem>
+    @Query("SELECT * FROM NotificationItem ORDER BY postTime DESC LIMIT 100")
+    suspend fun recent(): List<NotificationItem>
+    @Query("UPDATE NotificationItem SET vote=:v WHERE id=:id")
+    suspend fun setVote(id: Long, v: Int)
+    @Query("UPDATE NotificationItem SET filtered=1 WHERE id=:id")
+    suspend fun updateFiltered(id: Long, f: Boolean)
+}
+
+@Database(entities = [NotificationItem::class], version = 1)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun dao(): NotificationDao
+    companion object {
+        @Volatile private var INSTANCE: AppDatabase? = null
+        fun get(ctx: android.content.Context) = INSTANCE ?: synchronized(this) {
+            Room.databaseBuilder(ctx, AppDatabase::class.java, "notifymind.db").build().also { INSTANCE = it }
+        }
+    }
+}

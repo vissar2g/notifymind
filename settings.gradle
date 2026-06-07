@@ -1,0 +1,39 @@
+package com.notifymind.filter
+
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.notifymind.filter.databinding.ItemNotificationBinding
+
+class NotificationAdapter(
+    private val onVote: (NotificationItem, Int) -> Unit
+) : ListAdapter<NotificationItem, NotificationAdapter.VH>(Diff()) {
+
+    class VH(val b: ItemNotificationBinding) : RecyclerView.ViewHolder(b.root)
+    class Diff : DiffUtil.ItemCallback<NotificationItem>() {
+        override fun areItemsTheSame(a: NotificationItem, b: NotificationItem) = a.id == b.id
+        override fun areContentsTheSame(a: NotificationItem, b: NotificationItem) = a == b
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val b = ItemNotificationBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(b)
+    }
+
+    override fun onBindViewHolder(h: VH, pos: Int) {
+        val item = getItem(pos)
+        h.b.txtApp.text = item.packageName
+        h.b.txtTitle.text = item.title.ifEmpty { "(no title)" }
+        h.b.txtBody.text = item.text.ifEmpty { "(no text)" }
+        val voted = item.vote != -1
+        h.b.btnKeep.isEnabled = !voted
+        h.b.btnDismiss.isEnabled = !voted
+        h.b.btnKeep.alpha = if (voted && item.vote==1) 1f else if(voted) 0.4f else 1f
+        h.b.btnDismiss.alpha = if (voted && item.vote==0) 1f else if(voted) 0.4f else 1f
+
+        h.b.btnKeep.setOnClickListener { onVote(item, 1) }
+        h.b.btnDismiss.setOnClickListener { onVote(item, 0) }
+    }
+}
